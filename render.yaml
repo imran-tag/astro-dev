@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: astro
+    env: python
+    plan: free
+    buildCommand: sh ./build.sh
+    startCommand: gunicorn technician.wsgi:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DJANGO_SETTINGS_MODULE
+        value: technician.settings
