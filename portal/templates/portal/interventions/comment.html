@@ -1,0 +1,288 @@
+{% extends "portal/base_offline.html" %}
+
+{% block title %}Compte rendu - Astro Tech{% endblock %}
+
+{% block extra_head %}
+<style>
+    .header {
+        background-color: #f3f4f6;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .comment-area {
+        margin: 1rem;
+        padding: 1rem;
+    }
+
+    .navigation {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 1rem;
+        background-color: #f3f4f6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .nav-button {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #14224A;
+        font-weight: 500;
+    }
+
+    .progress-dots {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .dot {
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+        background-color: #d1d5db;
+    }
+
+    .dot.active {
+        background-color: #14224A;
+    }
+
+    textarea {
+        width: 100%;
+        min-height: 200px;
+        padding: 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        resize: none;
+        background-color: #f9fafb;
+    }
+
+    textarea:focus {
+        outline: none;
+        border-color: #14224A;
+        background-color: white;
+    }
+
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.9);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .loading-dots {
+        display: flex;
+        gap: 8px;
+    }
+
+    .loading-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #3b82f6;
+        animation: pulse 1.4s infinite ease-in-out;
+    }
+
+    .loading-dot:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .loading-dot:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(0.8);
+            opacity: 0.5;
+        }
+        50% {
+            transform: scale(1.2);
+            opacity: 1;
+        }
+    }
+    
+    .save-button {
+        display: block;
+        margin: 1rem auto;
+        padding: 0.75rem 2rem;
+        background-color: #14224A;
+        color: white;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+    
+    .confirmation-message {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 1001;
+        display: none;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white pb-20">
+    <!-- Header -->
+    <div class="header">
+        <button onclick="goBack()" class="text-blue-900">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        </button>
+        <h1 class="text-xl font-bold">Compte rendu</h1>
+    </div>
+
+    <!-- Comment Section -->
+    <div class="comment-area">
+        <h2 class="text-lg font-bold mb-2">Commentaire</h2>
+        <textarea id="commentInput" name="comment" class="w-full p-2 border rounded" rows="4"></textarea>
+    </div>
+    
+    <!-- Bouton de sauvegarde -->
+    <button onclick="saveCommentData()" class="save-button">
+        SAUVEGARDER
+    </button>
+    
+    <!-- Message de confirmation -->
+    <div id="confirmationMessage" class="confirmation-message">
+        <p class="mb-4">Commentaire sauvegardé avec succès!</p>
+        <button onclick="hideConfirmation()" class="bg-blue-600 text-white px-4 py-2 rounded">OK</button>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-dots">
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="navigation">
+        <button onclick="window.location.href='{% url 'photos_after' intervention.uid %}'" class="nav-button">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            PRÉCÉDENT
+        </button>
+
+        <div class="progress-dots">
+            {% for i in "123456"|make_list %}
+            <div class="dot {% if forloop.counter == 4 %}active{% endif %}"></div>
+            {% endfor %}
+        </div>
+
+        <a href="{% url 'quality_control' intervention.uid %}" class="nav-button">
+            SUIVANT
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const interventionId = "{{ intervention.uid }}";
+    let saveInProgress = false;
+
+    function showLoading() {
+        document.getElementById("loadingOverlay").style.display = "flex";
+    }
+
+    function hideLoading() {
+        document.getElementById("loadingOverlay").style.display = "none";
+    }
+
+    function showConfirmation() {
+        document.getElementById("confirmationMessage").style.display = "block";
+    }
+
+    function hideConfirmation() {
+        document.getElementById("confirmationMessage").style.display = "none";
+    }
+
+    function saveCommentData() {
+        if (saveInProgress) return;
+
+        saveInProgress = true;
+        showLoading();
+
+        const commentText = document.getElementById("commentInput").value;
+        const formData = new FormData();
+        formData.append("comment", commentText);
+
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Timeout")), 5000);
+        });
+
+        Promise.race([
+            fetch(window.location.href, {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            }),
+            timeoutPromise
+        ])
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showConfirmation();
+            } else {
+                console.error("Error saving comment:", data.message);
+                alert("Erreur lors de la sauvegarde du commentaire: " + (data.message || "Erreur inconnue"));
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            alert("Erreur lors de la sauvegarde du commentaire");
+        })
+        .finally(() => {
+            saveInProgress = false;
+            hideLoading();
+        });
+    }
+
+    function goBack() {
+        window.history.back();
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const existingComment = "{{ intervention.comments|escapejs }}";
+        if (existingComment) {
+            document.getElementById("commentInput").value = existingComment;
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,233 @@
+{% extends "portal/base_offline.html" %}
+
+{% block title %}Photos après intervention - Astro Tech{% endblock %}
+
+{% block extra_head %}
+<style>
+    .header {
+        background-color: #f3f4f6;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .photo-box {
+        aspect-ratio: 1;
+        border: 2px solid #e5e7eb;
+        border-radius: 0.5rem;
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem;
+    }
+
+    .action-button {
+        width: 2.5rem;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #14224A;
+    }
+
+    .delete-button {
+        position: absolute;
+        top: -0.5rem;
+        right: -0.5rem;
+        background-color: #ff0000;
+        color: white;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        cursor: pointer;
+    }
+
+    .navigation {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 1rem;
+        background-color: #f3f4f6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .nav-button {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #14224A;
+        font-weight: 500;
+    }
+
+    .progress-dots {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .dot {
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+        background-color: #d1d5db;
+    }
+
+    .dot.active {
+        background-color: #14224A;
+    }
+
+    #imageInput {
+        display: none;
+    }
+
+    .loading-indicator {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 0.5rem;
+        z-index: 1000;
+    }
+
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .loading-dots {
+        display: flex;
+        gap: 8px;
+    }
+
+    .loading-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #3b82f6;
+        animation: pulse 1.4s infinite ease-in-out;
+    }
+
+    .loading-dot:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .loading-dot:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(0.8);
+            opacity: 0.5;
+        }
+        50% {
+            transform: scale(1.2);
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white pb-20">
+    {% csrf_token %}
+
+    <!-- Header -->
+    <div class="header">
+        <button onclick="goBack()" class="text-blue-900">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        </button>
+        <h1 class="text-xl font-bold">Photos/vidéos après intervention</h1>
+    </div>
+
+    <!-- Photo Grid -->
+    <div class="photo-grid">
+        {% for i in "123456789"|make_list %}
+        <div class="photo-box">
+            <button onclick="openGallery()" class="action-button">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            </button>
+            <button onclick="openCamera()" class="action-button">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Hidden File Input -->
+    <input type="file"
+           id="imageInput"
+           accept="image/*,video/*"
+           capture="environment"
+           multiple
+           onchange="handleImageUpload(event)">
+
+    <!-- Navigation -->
+    <div class="navigation">
+        <button onclick="window.location.href='{% url 'photo_upload' intervention.uid %}'" class="nav-button">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            PRÉCÉDENT
+        </button>
+
+        <div class="progress-dots">
+            {% for i in "123456"|make_list %}
+            <div class="dot {% if forloop.counter == 3 %}active{% endif %}"></div>
+            {% endfor %}
+        </div>
+
+        <button onclick="window.location.href='{% url 'comment' intervention.uid %}'" class="nav-button">
+            SUIVANT
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// The offline photo upload functionality will be handled by the base template
+// Functions openGallery() and openCamera() are now global
+
+function goBack() {
+    window.history.back();
+}
+</script>
+{% endblock %}

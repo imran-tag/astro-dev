@@ -1,0 +1,327 @@
+{% extends "portal/base_offline.html" %}
+
+{% block title %}Interventions - Astro Tech{% endblock %}
+
+{% block extra_head %}
+<style>
+    .intervention-card {
+        background-color: #424242;
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 0.75rem 1rem;
+        color: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: opacity 0.2s ease;
+    }
+
+    .urgent-card {
+        background-color: #542424;
+        border: 2px solid #FF4444;
+    }
+
+    .status-yellow { background-color: #FFC107; }
+
+    .not-validated-card {
+        border: 2px solid #FFC107;
+    }
+
+    .status-icon {
+        min-width: 50px;
+        height: 50px;
+        border-radius: 25px;
+        margin-right: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .status-blue { background-color: #14224A; }
+    .status-orange { background-color: #FF6B00; }
+    .status-red { background-color: #FF0000; }
+
+    .intervention-card:active {
+        opacity: 0.7;
+    }
+
+    .header {
+        background-color: #f3f4f6;
+        padding: 0.75rem;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .main-content {
+        padding-top: 120px;
+        padding-bottom: 70px;
+    }
+
+    .filter-container {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        background-color: white;
+    }
+
+    .date-header {
+        color: #666;
+        font-size: 1.25rem;
+        padding: 1rem;
+        background-color: #f9f9f9;
+        margin: 0;
+        font-weight: 500;
+    }
+
+    .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: white;
+        padding: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        height: 60px;
+    }
+
+    .dropdown {
+        width: 100%;
+        background-color: white;
+        padding: 0.75rem 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .dropdown-button {
+        width: 100%;
+        text-align: left;
+        padding: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 1.1rem;
+        background-color: white;
+        border: none;
+        border-radius: 8px;
+    }
+
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        left: 0;
+        right: 0;
+        background-color: white;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        z-index: 30;
+    }
+
+    .dropdown-content a {
+        padding: 1rem;
+        display: block;
+        color: #333;
+        text-decoration: none;
+        border-bottom: 1px solid #eee;
+    }
+
+    .dropdown-content a:last-child {
+        border-bottom: none;
+    }
+
+    .show { display: block; }
+
+    /* Touch-specific styles */
+    @media (hover: none) {
+        .dropdown-content a:active {
+            background-color: #f3f4f6;
+        }
+        .intervention-card:active {
+            opacity: 0.9;
+        }
+    }
+
+    /* Small height screens */
+    @media (max-height: 667px) {
+        .header {
+            height: 50px;
+        }
+        .main-content {
+            padding-top: 110px;
+        }
+        .intervention-card {
+            padding: 0.75rem;
+            margin: 0.5rem 1rem;
+        }
+        .status-icon {
+            min-width: 40px;
+            height: 40px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Top Header -->
+<div class="header">
+    <img src="https://astro-tech.fr/astro-ges/uploads/images/astro-logo.png" alt="Astro Tech" class="h-7">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-blue-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+</div>
+
+<!-- Filter Container -->
+<div class="filter-container">
+    <div class="dropdown">
+        <button onclick="toggleDropdown()" class="dropdown-button">
+            <span>
+                {% if current_filter == 'all' %}
+                    Toutes les interventions
+                {% elif current_filter == 'planned' %}
+                    Interventions planifiées
+                {% elif current_filter == 'in_progress' %}
+                    Interventions en cours
+                {% elif current_filter == 'not_validated' %}
+                    Interventions non validées
+                {% endif %}
+            </span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+        </button>
+        <div id="filterDropdown" class="dropdown-content">
+            <a href="?filter=all" {% if current_filter == 'all' %}class="active"{% endif %}>
+                Toutes les interventions
+            </a>
+            <a href="?filter=planned" {% if current_filter == 'planned' %}class="active"{% endif %}>
+                Interventions planifiées
+            </a>
+            <a href="?filter=in_progress" {% if current_filter == 'in_progress' %}class="active"{% endif %}>
+                Interventions en cours
+            </a>
+            <a href="?filter=not_validated" {% if current_filter == 'not_validated' %}class="active"{% endif %}>
+                Interventions non validées
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+    {% if current_filter == 'not_validated' or current_filter == 'all' %}
+        {% if 'not_validated' in grouped_interventions %}
+            <h2 class="date-header">Interventions Non Validées</h2>
+            {% for intervention in grouped_interventions.not_validated %}
+                {% if intervention.status_uid == 6 %}
+                    {% include "portal/interventions/card.html" with intervention=intervention %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endif %}
+
+    <!-- Urgent interventions -->
+    {% if 'urgent' in grouped_interventions %}
+        <h2 class="date-header text-red-600">Interventions Urgentes</h2>
+        {% for intervention in grouped_interventions.urgent %}
+            {% include "portal/interventions/card.html" with intervention=intervention %}
+        {% endfor %}
+    {% endif %}
+
+    <!-- Today's interventions -->
+    {% if 'today' in grouped_interventions %}
+        <h2 class="date-header">Aujourd'hui</h2>
+        {% for intervention in grouped_interventions.today %}
+            {% include "portal/interventions/card.html" with intervention=intervention %}
+        {% endfor %}
+    {% endif %}
+
+    <!-- Future interventions -->
+    {% for date, interventions in grouped_interventions.items %}
+        {% if date != 'today' and date != 'urgent' %}
+            <h2 class="date-header">{{ date }}</h2>
+            {% for intervention in interventions %}
+                {% include "portal/interventions/card.html" with intervention=intervention %}
+            {% endfor %}
+        {% endif %}
+    {% endfor %}
+
+    {% if not grouped_interventions %}
+        <p class="text-center text-gray-500 my-8">Aucune intervention trouvée</p>
+    {% endif %}
+</div>
+
+<!-- Bottom Navigation -->
+<div class="bottom-nav">
+    <!-- Add any bottom navigation content here if needed -->
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshMainContent() {
+    fetch(window.location.href)
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // Only update the main content section
+            const newContent = doc.querySelector('.main-content');
+            const currentContent = document.querySelector('.main-content');
+
+            // Update only if we found both elements and content is different
+            if (newContent && currentContent && newContent.innerHTML !== currentContent.innerHTML) {
+                currentContent.innerHTML = newContent.innerHTML;
+
+                // Reattach event listeners for the new cards
+                document.querySelectorAll('.intervention-card').forEach(card => {
+                    card.addEventListener('click', function(e) {
+                        console.log('Card clicked');
+                        const url = this.closest('a').href;
+                        console.log('Navigating to:', url);
+                    });
+                });
+            }
+        })
+        .catch(error => console.error('Error refreshing content:', error));
+}
+
+// Set up the refresh interval
+const refreshInterval = 1000;
+setInterval(refreshMainContent, refreshInterval);
+
+// Also refresh when the page becomes visible again
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        refreshMainContent();
+    }
+});
+
+document.querySelectorAll('.intervention-card').forEach(card => {
+    card.addEventListener('click', function(e) {
+        console.log('Card clicked');
+        const url = this.closest('a').href;
+        console.log('Navigating to:', url);
+    });
+});
+
+function toggleDropdown() {
+    document.getElementById("filterDropdown").classList.toggle("show");
+}
+
+// Prevent scrolling when dropdown is open
+document.querySelector('.dropdown-button').addEventListener('click', function(e) {
+    if (document.getElementById("filterDropdown").classList.contains('show')) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = 'auto';
+    }
+});
+</script>
+{% endblock %}

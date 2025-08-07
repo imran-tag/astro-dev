@@ -1,0 +1,165 @@
+{% extends "portal/base_offline.html" %}
+
+{% block title %}Contrôle de sécurité - Astro Tech{% endblock %}
+
+{% block extra_head %}
+<style>
+    .header {
+        background-color: #f3f4f6;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .back-button {
+        color: #14224A;
+        padding: 0.5rem;
+    }
+
+    .checkbox-item {
+        display: flex;
+        align-items: start;
+        gap: 1rem;
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .custom-checkbox {
+        width: 24px;
+        height: 24px;
+        border: 2px solid #14224A;
+        border-radius: 4px;
+        flex-shrink: 0;
+        margin-top: 0.25rem;
+    }
+
+    .custom-checkbox.checked {
+        background-color: #14224A;
+        position: relative;
+    }
+
+    .custom-checkbox.checked::after {
+        content: '✓';
+        color: white;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    .next-button {
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        padding: 0.75rem 1.5rem;
+        background-color: #14224A;
+        color: white;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .progress-dots {
+        position: fixed;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #e5e7eb;
+    }
+
+    .dot.active {
+        background-color: #14224A;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white">
+    <!-- Header -->
+    <div class="header">
+        <a href="{% url 'intervention_detail' intervention.uid %}" class="back-button">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        </a>
+        <h1 class="text-xl font-bold text-gray-900">Contrôle de sécurité</h1>
+    </div>
+
+    <form id="security-form">
+        {% for item in security_items %}
+        <div class="checkbox-item" onclick="toggleCheckbox({{ forloop.counter0 }})">
+            <div id="checkbox-{{ forloop.counter0 }}" class="custom-checkbox"></div>
+            <span class="text-gray-900 text-lg">{{ item }}</span>
+        </div>
+        {% endfor %}
+    </form>
+
+    <!-- Progress dots -->
+    <div class="progress-dots">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+    </div>
+
+    <!-- Next button -->
+    <button onclick="submitForm()" class="next-button">
+        <span>SUIVANT</span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let checkboxStates = Array({{ security_items|length }}).fill(false);
+
+    function toggleCheckbox(index) {
+        checkboxStates[index] = !checkboxStates[index];
+        const checkbox = document.getElementById(`checkbox-${index}`);
+        if (checkboxStates[index]) {
+            checkbox.classList.add('checked');
+        } else {
+            checkbox.classList.remove('checked');
+        }
+    }
+
+    async function submitForm() {
+        const securityString = checkboxStates.map(state => state ? '1' : '0').join(';');
+
+        try {
+            const response = await fetch('', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `security=${securityString}`
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.next_url) {
+                window.location.href = data.next_url;
+            } else {
+                console.error('Error submitting form:', data.message);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+</script>
+{% endblock %}

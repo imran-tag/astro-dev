@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Enregistrement vocal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .header {
+            background-color: #f3f4f6;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+        }
+
+        .recording-container {
+            margin-top: 80px;
+            margin-bottom: 80px;
+            padding: 1rem;
+        }
+
+        .navigation {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .recording-button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #ef4444;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px auto;
+        }
+
+        .recording-button.recording {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+            70% {
+                transform: scale(1.1);
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+    </style>
+</head>
+<body class="bg-white">
+    <!-- Header -->
+    <div class="header">
+        <button onclick="window.location.href='{% url 'photos_after' intervention.uid %}'" class="text-blue-900">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        </button>
+        <h1 class="text-xl font-bold">Message vocal</h1>
+    </div>
+
+    <!-- Recording Container -->
+    <div class="recording-container">
+        <div class="text-center mb-8">
+            <p class="text-lg mb-4">Enregistrez un message vocal pour l'intervention</p>
+            <div id="recordingButton" class="recording-button cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+            </div>
+            <p id="recordingStatus" class="mt-4">Appuyez pour commencer l'enregistrement</p>
+        </div>
+
+        <div id="audioPreview" class="hidden">
+            <audio id="audioPlayer" controls class="w-full mb-4"></audio>
+            <div class="flex justify-center gap-4">
+                <button onclick="retryRecording()" class="px-4 py-2 bg-gray-200 rounded-lg">
+                    Recommencer
+                </button>
+                <button onclick="saveRecording()" class="px-4 py-2 bg-blue-600 text-white rounded-lg">
+                    Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="navigation">
+        <button onclick="window.location.href='{% url 'photos_after' intervention.uid %}'" class="nav-button">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            PRÉCÉDENT
+        </button>
+
+        <div class="flex gap-1">
+            {% for i in "123456"|make_list %}
+            <div class="w-2 h-2 rounded-full {% if forloop.counter == 4 %}bg-blue-900{% else %}bg-gray-300{% endif %}"></div>
+            {% endfor %}
+        </div>
+
+        <button id="nextButton" onclick="goToNext()" class="nav-button" disabled>
+            SUIVANT
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+        </button>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let recordedBlob = null;
+
+        const recordingButton = document.getElementById('recordingButton');
+        const recordingStatus = document.getElementById('recordingStatus');
+        const audioPreview = document.getElementById('audioPreview');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const nextButton = document.getElementById('nextButton');
+
+        recordingButton.addEventListener('click', toggleRecording);
+
+        async function toggleRecording() {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        recordedBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(recordedBlob);
+                        audioPlayer.src = audioUrl;
+                        audioPreview.classList.remove('hidden');
+                        recordingButton.classList.add('hidden');
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    recordingButton.classList.add('recording');
+                    recordingStatus.textContent = 'Enregistrement en cours...';
+                } catch (err) {
+                    console.error('Error accessing microphone:', err);
+                    alert('Impossible d\'accéder au microphone');
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                recordingButton.classList.remove('recording');
+                recordingStatus.textContent = 'Enregistrement terminé';
+            }
+        }
+
+        function retryRecording() {
+            audioPreview.classList.add('hidden');
+            recordingButton.classList.remove('hidden');
+            recordingStatus.textContent = "Appuyez pour commencer l'enregistrement";
+            recordedBlob = null;
+        }
+
+        async function saveRecording() {
+            if (!recordedBlob) return;
+
+            const formData = new FormData();
+            formData.append('audio_blob', recordedBlob, 'recording.wav');
+
+            try {
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    nextButton.disabled = false;
+                    if (data.next_url) {
+                        window.location.href = data.next_url;
+                    }
+                } else {
+                    alert('Erreur lors de l\'enregistrement: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error saving recording:', error);
+                alert('Erreur lors de l\'enregistrement');
+            }
+        }
+
+        function goToNext() {
+            if (recordedBlob) {
+                window.location.href = '{{ next_url }}';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+{% extends "portal/base_offline.html" %}
+
+{% block title %}Connexion - Astro Tech{% endblock %}
+
+{% block extra_head %}
+<style>
+    .login-container {
+        max-width: 400px;
+        width: 90%;
+        margin: 2rem auto;
+        padding: 20px;
+    }
+    
+    .input-field {
+        width: 100%;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 8px;
+        border: none;
+        background-color: #f3f4f6;
+        -webkit-user-select: text;
+        user-select: text;
+    }
+    
+    .input-field:focus {
+        outline: 2px solid #14224A;
+        outline-offset: 2px;
+    }
+    
+    .login-button {
+        width: 100%;
+        padding: 1rem;
+        border-radius: 8px;
+        background-color: #14224A;
+        color: white;
+        font-weight: 500;
+        margin-top: 1rem;
+        transition: background-color 0.2s;
+    }
+    
+    .login-button:hover {
+        background-color: #0f1629;
+    }
+    
+    .login-button:active {
+        background-color: #0a0f1a;
+    }
+    
+    .forgot-password {
+        color: #14224A;
+        text-decoration: underline;
+        text-align: right;
+        display: block;
+        margin-top: 0.5rem;
+        -webkit-user-select: text;
+        user-select: text;
+    }
+    
+    .forgot-password:hover {
+        color: #0f1629;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white min-h-screen">
+    <div class="login-container">
+        <div class="text-center mb-8">
+            <img src="https://astro-tech.fr/astro-ges/uploads/images/astro-logo.png" 
+                 alt="Astro Tech Logo" 
+                 class="mx-auto w-32 mb-6">
+            <h1 class="text-2xl text-gray-600 mb-8">Je me connecte à Astro Tech</h1>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" class="space-y-4" id="loginForm">
+            {% csrf_token %}
+            <div>
+                <input type="email" 
+                       name="email" 
+                       required 
+                       placeholder="Email..."
+                       class="input-field"
+                       autocomplete="email">
+            </div>
+
+            <div class="relative">
+                <input type="password" 
+                       name="password" 
+                       required 
+                       placeholder="Mot de passe..."
+                       class="input-field"
+                       id="passwordField"
+                       autocomplete="current-password">
+                <button type="button" 
+                        class="absolute right-3 top-1/2 transform -translate-y-1/2"
+                        onclick="togglePassword()">
+                    <svg xmlns="http://www.w3.org/2000/svg" 
+                         fill="none" 
+                         viewBox="0 0 24 24" 
+                         stroke-width="1.5" 
+                         stroke="#14224A" 
+                         class="w-6 h-6"
+                         id="eyeIcon">
+                        <path stroke-linecap="round" 
+                              stroke-linejoin="round" 
+                              d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                        <path stroke-linecap="round" 
+                              stroke-linejoin="round" 
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+            </div>
+
+            <a href="#" class="forgot-password">Mot de passe oublié ?</a>
+
+            <button type="submit" class="login-button" id="submitBtn">
+                <span id="submitText">Je me connecte</span>
+                <span id="loadingSpinner" class="hidden">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Connexion en cours...
+                </span>
+            </button>
+        </form>
+        
+        <!-- Connection status indicator -->
+        <div id="connectionStatus" class="mt-4 text-center text-sm hidden">
+            <div class="flex items-center justify-center">
+                <div class="w-2 h-2 bg-yellow-400 rounded-full mr-2 animate-pulse"></div>
+                <span class="text-yellow-600">Tentative de connexion hors ligne...</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function togglePassword() {
+        const passwordField = document.getElementById('passwordField');
+        const eyeIcon = document.getElementById('eyeIcon');
+        
+        if (passwordField.type === 'password') {
+            passwordField.type = 'text';
+            eyeIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 11-4.243-4.243m4.242 4.242L9.88 9.88" />
+            `;
+        } else {
+            passwordField.type = 'password';
+            eyeIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            `;
+        }
+    }
+    
+    // Handle form submission with offline support
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        const submitBtn = document.getElementById('submitBtn');
+        const submitText = document.getElementById('submitText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const connectionStatus = document.getElementById('connectionStatus');
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        submitText.classList.add('hidden');
+        loadingSpinner.classList.remove('hidden');
+        
+        // Show offline status if not online
+        if (!navigator.onLine) {
+            connectionStatus.classList.remove('hidden');
+        }
+        
+        // Reset on form completion (success or error)
+        setTimeout(() => {
+            submitBtn.disabled = false;
+            submitText.classList.remove('hidden');
+            loadingSpinner.classList.add('hidden');
+            connectionStatus.classList.add('hidden');
+        }, 5000);
+    });
+    
+    // Handle connection status changes
+    window.addEventListener('online', function() {
+        const connectionStatus = document.getElementById('connectionStatus');
+        connectionStatus.classList.add('hidden');
+    });
+    
+    window.addEventListener('offline', function() {
+        const connectionStatus = document.getElementById('connectionStatus');
+        if (connectionStatus) {
+            connectionStatus.innerHTML = `
+                <div class="flex items-center justify-center">
+                    <div class="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+                    <span class="text-red-600">Hors ligne - Connexion automatique au retour de la connexion</span>
+                </div>
+            `;
+            connectionStatus.classList.remove('hidden');
+        }
+    });
+</script>
+{% endblock %}

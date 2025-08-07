@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1-crypto-js.js"></script>
+</head>
+<body>
+<button onclick="decryptPassword('encryptedPasswordString', 'yourSecretKeyHere')">Decrypt Password</button>
+
+function decryptPassword(encryptedPassword, secretKey) {
+    // Assuming 'secretKey' is a base64 encoded key or some other format
+    try {
+        var decryptedBytes = CryptoJS.AES.decrypt(encryptedPassword, CryptoJS.enc.Base64.parse(secretKey));
+        var decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
+
+        if (decryptedText) {
+            console.log("Decrypted Password: " + decryptedText);
+            return decryptedText;
+        } else {
+            console.error("Decryption failed: invalid password or key.");
+            return null;
+        }
+    } catch (e) {
+        console.error("Error during decryption: " + e.message);
+        return null;
+    }
+}
+fetch('/get-encrypted-data/')
+    .then(response => response.json())
+    .then(data => {
+        const encryptedPassword = data.encryptedPassword;
+        const secretKey = 'yourSecretKeyHere';  // This can be securely stored or passed
+        const decryptedPassword = decryptPassword(encryptedPassword, secretKey);
+        console.log(decryptedPassword);
+    })
+    .catch(error => console.error('Error fetching data:', error));
+
+
+
+</body>
+</html>

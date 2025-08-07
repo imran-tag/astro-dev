@@ -1,0 +1,140 @@
+<!-- portal/templates/portal/offline.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mode Hors Ligne - Astro Tech</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .offline-animation {
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(.33);
+            }
+            80%, 100% {
+                transform: scale(1.33);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+    <div class="max-w-md mx-auto text-center p-6">
+        <!-- Offline Icon -->
+        <div class="relative mb-8">
+            <div class="pulse-ring absolute inset-0 border-4 border-yellow-400 rounded-full opacity-75"></div>
+            <div class="offline-animation bg-yellow-400 rounded-full p-6 inline-block">
+                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 2v20M2 12h20"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Title -->
+        <h1 class="text-2xl font-bold text-gray-800 mb-4">Mode Hors Ligne</h1>
+
+        <!-- Description -->
+        <p class="text-gray-600 mb-6">
+            Vous êtes actuellement hors ligne. L'application continue de fonctionner et vos données seront synchronisées dès que la connexion sera rétablie.
+        </p>
+
+        <!-- Features available offline -->
+        <div class="bg-white rounded-lg p-4 mb-6 shadow-sm">
+            <h3 class="font-semibold text-gray-800 mb-3">Fonctionnalités disponibles :</h3>
+            <ul class="text-sm text-gray-600 space-y-2">
+                <li class="flex items-center">
+                    <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    Consulter les interventions
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    Prendre des photos
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    Remplir les formulaires
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    Enregistrer des commentaires
+                </li>
+            </ul>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="space-y-3">
+            <button onclick="window.location.href='/interventions/'"
+                    class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                Voir les Interventions
+            </button>
+
+            <button onclick="location.reload()"
+                    class="w-full bg-gray-200 text-gray-800 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 transition-colors">
+                Réessayer la Connexion
+            </button>
+        </div>
+
+        <!-- Connection status -->
+        <div class="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div class="flex items-center justify-center">
+                <div class="w-2 h-2 bg-yellow-400 rounded-full mr-2 animate-pulse"></div>
+                <span class="text-sm text-yellow-800">Vérification de la connexion...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-redirect when online -->
+    <script>
+        // Check connection every 3 seconds
+        setInterval(() => {
+            if (navigator.onLine) {
+                // Try to fetch a small resource to confirm connection
+                fetch('/manifest.json', { cache: 'no-cache' })
+                    .then(() => {
+                        // Connection restored, redirect to interventions
+                        window.location.href = '/interventions/';
+                    })
+                    .catch(() => {
+                        // Still offline, keep checking
+                    });
+            }
+        }, 3000);
+
+        // Listen for online event
+        window.addEventListener('online', () => {
+            setTimeout(() => {
+                window.location.href = '/interventions/';
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

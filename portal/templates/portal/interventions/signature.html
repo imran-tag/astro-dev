@@ -1,0 +1,477 @@
+{% extends "portal/base_offline.html" %}
+
+{% block title %}Signature client - Astro Tech{% endblock %}
+
+{% block extra_head %}
+<style>
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    .loading-dots {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .loading-dot {
+        width: 1rem;
+        height: 1rem;
+        background-color: #1e40af;
+        border-radius: 50%;
+        animation: bounce 0.5s ease-in-out infinite;
+    }
+
+    .loading-dot:nth-child(2) {
+        animation-delay: 0.1s;
+    }
+
+    .loading-dot:nth-child(3) {
+        animation-delay: 0.2s;
+    }
+
+    @keyframes bounce {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-0.5rem);
+        }
+    }
+    
+    .header {
+        background-color: #f3f4f6;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+    }
+
+    .signature-pad {
+        margin: 80px 1rem 80px 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        background-color: white;
+        touch-action: none;
+    }
+
+    #signatureCanvas {
+        width: 100%;
+        height: 300px;
+        background-color: white;
+        cursor: crosshair;
+    }
+
+    .button-container {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+        justify-content: center;
+    }
+
+    .btn {
+        padding: 0.75rem 2rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        transition: opacity 0.2s;
+    }
+
+    .btn:active {
+        opacity: 0.8;
+    }
+
+    .btn-clear {
+        background-color: #14224A;
+        color: white;
+    }
+
+    .btn-validate {
+        background-color: #14224A;
+        color: white;
+    }
+
+    .navigation {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 1rem;
+        background-color: #f3f4f6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .nav-button {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #14224A;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        border-radius: 0.25rem;
+    }
+
+    .save-button {
+        display: block;
+        margin: 1rem auto;
+        padding: 0.75rem 2rem;
+        background-color: #14224A;
+        color: white;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+
+    .confirmation-message {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 1001;
+        display: none;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white">
+    <!-- Header -->
+    <div class="header">
+        <button onclick="goBack()" class="text-blue-900">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        </button>
+        <h1 class="text-xl font-bold">Signature client</h1>
+    </div>
+
+    <!-- Signature Pad -->
+    <div class="signature-container w-full" style="margin-top: 80px;">
+        <canvas id="signatureCanvas" class="border border-gray-300 w-full"></canvas>
+    </div>
+
+    <!-- Buttons -->
+    <div class="button-container">
+        <button onclick="clearSignature()" class="btn-secondary">
+            Effacer
+        </button>
+        <button onclick="saveSignatureData()" class="save-button">
+            SAUVEGARDER
+        </button>
+    </div>
+    
+    <div class="not-validated-container flex justify-center mt-4 mb-4">
+        <button onclick="markNotValidated()" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors">
+            Marquer comme non validée
+        </button>
+    </div>
+
+    <!-- Message de confirmation -->
+    <div id="confirmationMessage" class="confirmation-message">
+        <p class="mb-4">Signature sauvegardée avec succès!</p>
+        <button onclick="hideConfirmation()" class="bg-blue-600 text-white px-4 py-2 rounded">OK</button>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-dots">
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="navigation">
+        <button onclick="window.location.href='{% url 'quality_control' intervention.uid %}'" class="nav-button">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            PRÉCÉDENT
+        </button>
+
+        <div class="flex gap-1">
+            {% for i in "123456"|make_list %}
+            <div class="w-2 h-2 rounded-full {% if forloop.counter == 6 %}bg-blue-900{% else %}bg-gray-300{% endif %}"></div>
+            {% endfor %}
+        </div>
+
+        <button onclick="finishIntervention()" class="nav-button">
+            TERMINER
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const interventionListUrl = "{% url 'interventions' %}";
+    const interventionId = "{{ intervention.uid }}";
+    let saveInProgress = false;
+
+    function showLoading() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    function showConfirmation() {
+        document.getElementById('confirmationMessage').style.display = 'block';
+    }
+
+    function hideConfirmation() {
+        document.getElementById('confirmationMessage').style.display = 'none';
+    }
+
+    function markNotValidated() {
+        if (saveInProgress) return;
+
+        if (confirm('Êtes-vous sûr de vouloir marquer cette intervention comme non validée ?')) {
+            saveInProgress = true;
+            showLoading();
+
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Timeout')), 5000);
+            });
+
+            Promise.race([
+                fetch(window.location.href, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'mark_not_validated'
+                    })
+                }),
+                timeoutPromise
+            ])
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    alert('Erreur lors du marquage comme non validée: ' + (data.message || 'Erreur inconnue'));
+                    window.location.href = interventionListUrl;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Erreur lors du marquage comme non validée');
+                window.location.href = interventionListUrl;
+            })
+            .finally(() => {
+                saveInProgress = false;
+                hideLoading();
+            });
+        }
+    }
+
+    // Canvas signature functionality
+    const canvas = document.getElementById('signatureCanvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    function resizeCanvas() {
+        const container = canvas.parentElement;
+        const width = container.clientWidth;
+        const height = Math.min(400, window.innerHeight * 0.5);
+        canvas.width = width;
+        canvas.height = height;
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+    }
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', stopDrawing);
+
+    function startDrawing(e) {
+        isDrawing = true;
+        [lastX, lastY] = getCoordinates(e);
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const [currentX, currentY] = getCoordinates(e);
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(currentX, currentY);
+        ctx.stroke();
+        [lastX, lastY] = [currentX, currentY];
+    }
+
+    function stopDrawing() {
+        isDrawing = false;
+    }
+
+    function getCoordinates(e) {
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches ? e.touches[0] : null;
+        const clientX = touch ? touch.clientX : e.clientX;
+        const clientY = touch ? touch.clientY : e.clientY;
+        return [
+            (clientX - rect.left) * (canvas.width / rect.width),
+            (clientY - rect.top) * (canvas.height / rect.height)
+        ];
+    }
+
+    function handleTouchStart(e) {
+        e.preventDefault();
+        startDrawing(e);
+    }
+
+    function handleTouchMove(e) {
+        e.preventDefault();
+        draw(e);
+    }
+
+    function clearSignature() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function saveSignatureData() {
+        if (saveInProgress) return;
+        saveInProgress = true;
+        showLoading();
+        
+        const signatureData = canvas.toDataURL('image/png');
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Timeout')), 8000);
+        });
+
+        Promise.race([
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    signature: signatureData
+                })
+            }),
+            timeoutPromise
+        ])
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(`Network response was not ok: ${response.status} ${response.statusText} - ${text}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.success === true) {
+                showConfirmation();
+            } else {
+                console.error('Erreur de sauvegarde - Réponse reçue:', data);
+                let errorMessage = 'Erreur lors de la sauvegarde de la signature';
+                if (data && data.message) {
+                    errorMessage = String(data.message).replace(/success/gi, '').trim();
+                    if (!errorMessage) {
+                        errorMessage = 'Erreur lors de la sauvegarde (Message API vide ou invalide)';
+                    }
+                } else if (data) {
+                    errorMessage = 'Erreur lors de la sauvegarde (Format de réponse inattendu)';
+                }
+                alert(errorMessage);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur lors de la sauvegarde de la signature: ' + error.message);
+        })
+        .finally(() => {
+            saveInProgress = false;
+            hideLoading();
+        });
+    }
+
+    function finishIntervention() {
+        if (saveInProgress) return;
+        saveInProgress = true;
+        showLoading();
+
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Timeout')), 5000);
+        });
+
+        Promise.race([
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'finish'
+                })
+            }),
+            timeoutPromise
+        ])
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(`Network response was not ok: ${response.status} ${response.statusText} - ${text}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else {
+                alert('Erreur lors de la finalisation de l\'intervention: ' + (data.message || 'Erreur inconnue'));
+            }
+        })
+        .catch(error => {
+            console.error('Error finishing intervention:', error);
+            alert('Erreur lors de la finalisation de l\'intervention: ' + error.message);
+        })
+        .finally(() => {
+            saveInProgress = false;
+            hideLoading();
+        });
+    }
+
+    function goBack() {
+        window.history.back();
+    }
+</script>
+{% endblock %}
